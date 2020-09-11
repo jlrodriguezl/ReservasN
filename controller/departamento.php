@@ -1,4 +1,5 @@
 <?php
+header('Access-Control-Allow-Origin: *');
 require_once('db.php');
 require_once('../model/Departamento.php');
 require_once('../model/Response.php');
@@ -118,6 +119,24 @@ if($_SERVER['REQUEST_METHOD']==='GET'){
     }
 }elseif($_SERVER['REQUEST_METHOD']==='DELETE'){
     try{
+        //Validar que el departamento no tenga ciudades relacionadas
+        $query = $db->prepare('select count(*) as conteo from ciudades where id_depto = :idDepto ');
+        $query->bindParam(':idDepto', $idDepto);
+        $query->execute();
+
+        while($row = $query->fetch(PDO::FETCH_ASSOC)){
+            $numRows = $row['conteo'];            
+        }
+
+        if($numRows > 0){
+            $response = new Response();
+            $response->setSuccess(false);
+            $response->setHttpStatusCode(500);
+            $response->addMessage('No es posible eliminar departamento. Ciudades asociadas');
+            $response->send();
+            exit();
+        }
+
         $query = $db->prepare('delete from departamentos where id_depto = :idDepto');
         $query->bindParam(':idDepto', $idDepto);
         $query->execute();
